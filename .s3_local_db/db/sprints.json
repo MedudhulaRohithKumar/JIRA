@@ -1,0 +1,20 @@
+{
+  "sprints": [
+    {
+      "id": "SPRINT-1",
+      "name": "Sprint 14 — CSR Portal & Design System v2",
+      "goal": "Deliver core CSR workflow screens, S3 document integration, and VPC security hardening.",
+      "start_date": "2026-10-26",
+      "end_date": "2026-11-03",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "SPRINT-2",
+      "name": "Sprint 15 — Automated Compliance & Reporting",
+      "goal": "Implement quarterly CSR audit exports and executive dashboards.",
+      "start_date": "2026-11-03",
+      "end_date": "2026-11-17",
+      "status": "PLANNED"
+    }
+  ]
+}

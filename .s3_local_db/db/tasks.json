@@ -1,0 +1,251 @@
+{
+  "next_seq": 108,
+  "tasks": [
+    {
+      "id": "CSR-101",
+      "title": "Design High-Fidelity CSR Approval Workflow Screens & Component Library",
+      "description": "Create complete Figma / design specs for the multi-stage CSR approval workflow, including status badges, timeline extension modals, and accessible color contrast.",
+      "task_type": "DESIGN_TASK",
+      "priority": "HIGH",
+      "status": "IN_PROGRESS",
+      "sprint_id": "SPRINT-1",
+      "story_points": 5,
+      "assignee_id": "USR-002",
+      "reporter_id": "USR-001",
+      "original_due_date": "2026-10-27",
+      "due_date": "2026-10-29",
+      "extension_count": 1,
+      "timeline_history": [
+        {
+          "old_due_date": "2026-10-27",
+          "new_due_date": "2026-10-29",
+          "reason": "Added 3 additional mobile responsive breakpoints requested by CSR committee.",
+          "extended_by": "USR-001",
+          "extended_by_name": "Rajesh Sharma",
+          "timestamp": "2026-10-27T14:38:02.895700+05:30"
+        }
+      ],
+      "estimated_hours": 16.0,
+      "logged_hours": 10.5,
+      "labels": [
+        "design-system",
+        "csr-ui",
+        "priority"
+      ],
+      "has_blocker": false,
+      "blocker_summary": "",
+      "comments": [
+        {
+          "id": "CMT-1001",
+          "task_id": "CSR-101",
+          "author_id": "USR-002",
+          "author_name": "Priya Nair",
+          "author_role": "USER",
+          "comment_type": "REMARK",
+          "content": "Completed wireframes and dark/light tokens. Working on final interactive states.",
+          "created_at": "2026-10-27T14:38:02.895700+05:30"
+        },
+        {
+          "id": "CMT-1002",
+          "task_id": "CSR-101",
+          "author_id": "USR-001",
+          "author_name": "Rajesh Sharma",
+          "author_role": "ADMIN",
+          "comment_type": "TIMELINE_EXTENSION",
+          "content": "Timeline extended from 2026-10-27 to 2026-10-29. Reason: Added 3 additional mobile responsive breakpoints.",
+          "created_at": "2026-10-27T14:38:02.895700+05:30"
+        }
+      ],
+      "created_at": "2026-10-26",
+      "updated_at": "2026-10-27T14:38:02.895700+05:30"
+    },
+    {
+      "id": "CSR-102",
+      "title": "Design CSR Partner Onboarding Portal & Document Upload Flow",
+      "description": "Create step-by-step partner onboarding screens, document verification progress indicators, and confirmation states for CSR coordinators.",
+      "task_type": "DESIGN_TASK",
+      "priority": "CRITICAL",
+      "status": "DONE",
+      "sprint_id": "SPRINT-1",
+      "story_points": 8,
+      "assignee_id": "USR-004",
+      "reporter_id": "USR-001",
+      "original_due_date": "2026-10-27",
+      "due_date": "2026-10-27",
+      "extension_count": 0,
+      "timeline_history": [],
+      "estimated_hours": 12.0,
+      "logged_hours": 11.0,
+      "labels": [
+        "onboarding",
+        "csr-portal",
+        "ux"
+      ],
+      "has_blocker": false,
+      "blocker_summary": "",
+      "comments": [
+        {
+          "id": "CMT-1003",
+          "task_id": "CSR-102",
+          "author_id": "USR-004",
+          "author_name": "Sneha Reddy",
+          "author_role": "USER",
+          "comment_type": "COMMENT",
+          "content": "Completed all 4 onboarding steps and shared prototypes with the review team.",
+          "created_at": "2026-10-27T14:38:02.895700+05:30"
+        }
+      ],
+      "created_at": "2026-10-26",
+      "updated_at": "2026-10-27T14:38:02.895700+05:30"
+    },
+    {
+      "id": "CSR-103",
+      "title": "Design Interactive Kanban Cards & Timeline Diff Indicator",
+      "description": "Design visual indicators on task cards when a deadline has been extended by Manager, and highlight tasks with active blockers in red.",
+      "task_type": "DESIGN_TASK",
+      "priority": "MEDIUM",
+      "status": "BLOCKED",
+      "sprint_id": "SPRINT-1",
+      "story_points": 3,
+      "assignee_id": "USR-005",
+      "reporter_id": "USR-001",
+      "original_due_date": "2026-10-29",
+      "due_date": "2026-10-29",
+      "extension_count": 0,
+      "timeline_history": [],
+      "estimated_hours": 8.0,
+      "logged_hours": 4.0,
+      "labels": [
+        "design",
+        "kanban",
+        "ux"
+      ],
+      "has_blocker": true,
+      "blocker_summary": "Awaiting final CSR brand icon set from internal brand compliance team.",
+      "comments": [
+        {
+          "id": "CMT-1004",
+          "task_id": "CSR-103",
+          "author_id": "USR-005",
+          "author_name": "Vikram Singh",
+          "author_role": "USER",
+          "comment_type": "BLOCKER",
+          "content": "Blocked: Awaiting final SVG icon set from CSR Brand Compliance team to finalize card header.",
+          "created_at": "2026-10-27T14:38:02.895700+05:30"
+        }
+      ],
+      "created_at": "2026-10-26",
+      "updated_at": "2026-10-27T14:38:02.895700+05:30"
+    },
+    {
+      "id": "CSR-104",
+      "title": "Build 8:00 PM Daily Status Cutoff Scheduler & SES HTML Email Template",
+      "description": "Implement EventBridge cron at 20:00 IST to lock daily status edits, mark non-submissions as NA, and email the summary table to Admin.",
+      "task_type": "FEATURE",
+      "priority": "CRITICAL",
+      "status": "IN_REVIEW",
+      "sprint_id": "SPRINT-1",
+      "story_points": 5,
+      "assignee_id": "USR-007",
+      "reporter_id": "USR-001",
+      "original_due_date": "2026-10-29",
+      "due_date": "2026-10-29",
+      "extension_count": 0,
+      "timeline_history": [],
+      "estimated_hours": 10.0,
+      "logged_hours": 9.0,
+      "labels": [
+        "eventbridge",
+        "ses-email",
+        "daily-status"
+      ],
+      "has_blocker": false,
+      "blocker_summary": "",
+      "comments": [],
+      "created_at": "2026-10-26",
+      "updated_at": "2026-10-27T14:38:02.895700+05:30"
+    },
+    {
+      "id": "CSR-105",
+      "title": "Frontend Role-Based Dashboard for Admin & Team Members",
+      "description": "Build SPA dashboard supporting Kanban board, task assignment, deadline extension, and pre-8PM daily status submission form.",
+      "task_type": "FEATURE",
+      "priority": "HIGH",
+      "status": "IN_PROGRESS",
+      "sprint_id": "SPRINT-1",
+      "story_points": 8,
+      "assignee_id": "USR-003",
+      "reporter_id": "USR-001",
+      "original_due_date": "2026-10-31",
+      "due_date": "2026-10-31",
+      "extension_count": 0,
+      "timeline_history": [],
+      "estimated_hours": 16.0,
+      "logged_hours": 7.5,
+      "labels": [
+        "frontend",
+        "rbac",
+        "dashboard"
+      ],
+      "has_blocker": false,
+      "blocker_summary": "",
+      "comments": [],
+      "created_at": "2026-10-26",
+      "updated_at": "2026-10-27T14:38:02.895700+05:30"
+    },
+    {
+      "id": "CSR-106",
+      "title": "Accessibility & Design QA Review for Q4 CSR Grant Application Forms",
+      "description": "Audit keyboard navigation, form validation states, and typography hierarchy across all CSR grant screens.",
+      "task_type": "REVIEW",
+      "priority": "HIGH",
+      "status": "TODO",
+      "sprint_id": "SPRINT-1",
+      "story_points": 5,
+      "assignee_id": "USR-006",
+      "reporter_id": "USR-001",
+      "original_due_date": "2026-10-31",
+      "due_date": "2026-10-31",
+      "extension_count": 0,
+      "timeline_history": [],
+      "estimated_hours": 10.0,
+      "logged_hours": 0.0,
+      "labels": [
+        "design-qa",
+        "accessibility"
+      ],
+      "has_blocker": false,
+      "blocker_summary": "",
+      "comments": [],
+      "created_at": "2026-10-26",
+      "updated_at": "2026-10-27T14:38:02.895700+05:30"
+    },
+    {
+      "id": "CSR-107",
+      "title": "Prepare Q4 CSR Beneficiary Onboarding Design Templates",
+      "description": "Design printable and web CSR beneficiary verification forms and workflow checklists.",
+      "task_type": "DESIGN_TASK",
+      "priority": "MEDIUM",
+      "status": "TODO",
+      "sprint_id": "SPRINT-1",
+      "story_points": 3,
+      "assignee_id": "USR-008",
+      "reporter_id": "USR-001",
+      "original_due_date": "2026-11-03",
+      "due_date": "2026-11-03",
+      "extension_count": 0,
+      "timeline_history": [],
+      "estimated_hours": 6.0,
+      "logged_hours": 1.0,
+      "labels": [
+        "csr-ops",
+        "templates"
+      ],
+      "has_blocker": false,
+      "blocker_summary": "",
+      "comments": [],
+      "created_at": "2026-10-26",
+      "updated_at": "2026-10-27T14:38:02.895700+05:30"
+    }
+  ]
+}

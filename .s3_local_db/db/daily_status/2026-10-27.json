@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-27",
+  "cutoff_finalized": false,
+  "submissions": {
+    "USR-002": {
+      "user_id": "USR-002",
+      "username": "priya",
+      "full_name": "Priya Nair",
+      "department": "UI/UX Design",
+      "date": "2026-10-27",
+      "status": "SUBMITTED",
+      "tasks_worked_on": [
+        "CSR-101"
+      ],
+      "accomplishments": "Completed high-fidelity CSR approval workflow screens and responsive mobile layouts.",
+      "planned_next": "Conduct design handoff session with Arjun for frontend implementation.",
+      "blockers_remarks": "None — timeline extended by 2 days for extra mobile breakpoints.",
+      "hours_logged": 7.5,
+      "submitted_at": "2026-10-27T14:38:02.895700+05:30",
+      "submitted_at_display": "02:38 PM",
+      "last_updated_at": "2026-10-27T14:38:02.895700+05:30",
+      "edit_count": 1,
+      "locked": false
+    },
+    "USR-004": {
+      "user_id": "USR-004",
+      "username": "sneha",
+      "full_name": "Sneha Reddy",
+      "department": "Product Engineering",
+      "date": "2026-10-27",
+      "status": "SUBMITTED",
+      "tasks_worked_on": [
+        "CSR-102"
+      ],
+      "accomplishments": "Completed partner onboarding flow screens and document upload validation states.",
+      "planned_next": "Assist Ananya with accessibility review for Q4 grant forms.",
+      "blockers_remarks": "None",
+      "hours_logged": 8.0,
+      "submitted_at": "2026-10-27T14:38:02.895700+05:30",
+      "submitted_at_display": "02:38 PM",
+      "last_updated_at": "2026-10-27T14:38:02.895700+05:30",
+      "edit_count": 1,
+      "locked": false
+    },
+    "USR-005": {
+      "user_id": "USR-005",
+      "username": "vikram",
+      "full_name": "Vikram Singh",
+      "department": "UI/UX Design",
+      "date": "2026-10-27",
+      "status": "SUBMITTED",
+      "tasks_worked_on": [
+        "CSR-103"
+      ],
+      "accomplishments": "Designed Kanban card badges for extended timelines and priority indicators.",
+      "planned_next": "Finalize SVG icons once CSR brand compliance team shares assets.",
+      "blockers_remarks": "BLOCKER on CSR-103: Waiting on SVG brand icon pack from compliance team.",
+      "hours_logged": 6.5,
+      "submitted_at": "2026-10-27T14:38:02.895700+05:30",
+      "submitted_at_display": "02:38 PM",
+      "last_updated_at": "2026-10-27T14:38:02.895700+05:30",
+      "edit_count": 2,
+      "locked": false
+    }
+  }
+}

@@ -1,0 +1,250 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  CSR Work Flow Manager — Internal Jira & 8:00 PM Daily Status Platform (20-Member Team).
+  Deployed inside a Private VPC (Zero Internet Exposure) using AWS Lambda, Private API Gateway,
+  Amazon S3 as Document DB (with KMS + ETag OCC), EventBridge 8 PM Cron, and AWS SES.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Internal Private VPC ID (No public internet exposure)
+  PrivateSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Private Subnet IDs for AWS Lambda execution
+  ApiGatewayVpcEndpointId:
+    Type: String
+    Description: VPC Interface Endpoint ID (vpce-xxx) for com.amazonaws.<region>.execute-api
+  S3VpcEndpointId:
+    Type: String
+    Description: VPC Gateway Endpoint ID (vpce-xxx) for com.amazonaws.<region>.s3
+  AdminReportEmails:
+    Type: String
+    Default: manager@internal.csr.local,admin@internal.csr.local
+    Description: Comma-separated recipient emails for the 8:00 PM Daily Status Report
+  SesSenderEmail:
+    Type: String
+    Default: csr-workflow-noreply@internal.csr.local
+    Description: Verified AWS SES sender address
+  JwtSecretKey:
+    Type: String
+    NoEcho: true
+    Description: High-entropy secret key for signing internal JWT tokens
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 25
+    MemorySize: 512
+    Architectures:
+      - arm64
+
+Resources:
+  # ---------------------------------------------------------------------------
+  # 1. Customer Managed KMS Key for S3 Document DB & Secrets Encryption
+  # ---------------------------------------------------------------------------
+  CsrWorkflowKmsKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS Key for CSR Work Flow Manager S3 Document DB Encryption
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowRootAccountManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: '*'
+
+  # ---------------------------------------------------------------------------
+  # 2. Amazon S3 Document Database Bucket (Zero Public Access + VPC Endpoint Only)
+  # ---------------------------------------------------------------------------
+  CsrDocumentDbBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub csr-workflow-docdb-${AWS::AccountId}-${AWS::Region}
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !GetAtt CsrWorkflowKmsKey.Arn
+            BucketKeyEnabled: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: ArchiveOldAuditLogs
+            Prefix: db/audit/
+            Status: Enabled
+            Transitions:
+              - StorageClass: GLACIER
+                TransitionInDays: 365
+
+  CsrDocumentDbBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref CsrDocumentDbBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyInsecureNonTlsTransport
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource:
+              - !GetAtt CsrDocumentDbBucket.Arn
+              - !Sub ${CsrDocumentDbBucket.Arn}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+          - Sid: DenyAccessOutsideInternalVpcEndpoint
+            Effect: Deny
+            Principal: '*'
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:DeleteObject
+              - s3:ListBucket
+            Resource:
+              - !GetAtt CsrDocumentDbBucket.Arn
+              - !Sub ${CsrDocumentDbBucket.Arn}/*
+            Condition:
+              StringNotEquals:
+                aws:SourceVpce: !Ref S3VpcEndpointId
+
+  # ---------------------------------------------------------------------------
+  # 3. Lambda Security Group (Egress only to VPC Endpoints over HTTPS 443)
+  # ---------------------------------------------------------------------------
+  CsrLambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for CSR Work Flow Manager Lambda in Private VPC
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTPS to Private VPC Endpoints (S3, SES, KMS, CloudWatch Logs)
+
+  # ---------------------------------------------------------------------------
+  # 4. Private API Gateway (Accessible ONLY via Private VPC Endpoint)
+  # ---------------------------------------------------------------------------
+  CsrPrivateApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: csr-workflow-private-api
+      StageName: prod
+      EndpointConfiguration:
+        Type: PRIVATE
+        VPCEndpointIds:
+          - !Ref ApiGatewayVpcEndpointId
+      Auth:
+        ResourcePolicy:
+          CustomStatements:
+            - Effect: Deny
+              Principal: '*'
+              Action: execute-api:Invoke
+              Resource: execute-api:/*/*/*
+              Condition:
+                StringNotEquals:
+                  aws:SourceVpce: !Ref ApiGatewayVpcEndpointId
+            - Effect: Allow
+              Principal: '*'
+              Action: execute-api:Invoke
+              Resource: execute-api:/*/*/*
+              Condition:
+                StringEquals:
+                  aws:SourceVpce: !Ref ApiGatewayVpcEndpointId
+
+  # ---------------------------------------------------------------------------
+  # 5. CSR Work Flow Manager AWS Lambda Function (FastAPI + Mangum + 8PM Cron)
+  # ---------------------------------------------------------------------------
+  CsrWorkflowFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: csr-workflow-manager
+      CodeUri: .
+      Handler: backend.app.lambda_handler
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref CsrLambdaSecurityGroup
+        SubnetIds: !Ref PrivateSubnetIds
+      Environment:
+        Variables:
+          ENV_STAGE: priv-vpc-prod
+          STORAGE_MODE: s3
+          S3_BUCKET_NAME: !Ref CsrDocumentDbBucket
+          KMS_KEY_ID: !GetAtt CsrWorkflowKmsKey.Arn
+          EMAIL_MODE: ses
+          SES_SENDER_EMAIL: !Ref SesSenderEmail
+          ADMIN_REPORT_EMAILS: !Ref AdminReportEmails
+          APP_TIMEZONE: Asia/Kolkata
+          DAILY_CUTOFF_HOUR: '20'
+          DAILY_CUTOFF_MINUTE: '0'
+          JWT_SECRET_KEY: !Ref JwtSecretKey
+          ENFORCE_PRIVATE_VPC_HEADERS: 'true'
+          ALLOWED_VPC_ENDPOINT_ID: !Ref ApiGatewayVpcEndpointId
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Sid: S3DocumentDbReadWrite
+              Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+                - s3:DeleteObject
+                - s3:ListBucket
+              Resource:
+                - !GetAtt CsrDocumentDbBucket.Arn
+                - !Sub ${CsrDocumentDbBucket.Arn}/*
+            - Sid: KmsEncryptDecryptForS3
+              Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:GenerateDataKey
+                - kms:DescribeKey
+              Resource: !GetAtt CsrWorkflowKmsKey.Arn
+            - Sid: SesDailyStatusEmailDispatch
+              Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+      Events:
+        RootProxy:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CsrPrivateApi
+            Path: /
+            Method: ANY
+        PathProxy:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CsrPrivateApi
+            Path: /{proxy+}
+            Method: ANY
+        # 8:00 PM IST (14:30 UTC) Automated Daily Status Cutoff & Email Trigger
+        DailyStatus8PmCutoffSchedule:
+          Type: Schedule
+          Properties:
+            Name: csr-workflow-8pm-daily-status-cutoff
+            Description: Locks daily status edits at 8:00 PM IST, marks unsubmitted users as NA, and emails report to Admin.
+            Schedule: cron(30 14 * * ? *)
+            Enabled: true
+            Input: '{"source": "aws.events", "action": "TRIGGER_8PM_DAILY_STATUS_REPORT"}'
+
+Outputs:
+  PrivateApiUrl:
+    Description: Internal VPC URL for CSR Work Flow Manager (Accessible via Corporate VPN / Direct Connect)
+    Value: !Sub https://${CsrPrivateApi}.execute-api.${AWS::Region}.amazonaws.com/prod/
+  S3DocumentDbBucketName:
+    Description: S3 Bucket used as Document DB
+    Value: !Ref CsrDocumentDbBucket

@@ -1,0 +1,173 @@
+{
+  "date": "2026-10-29",
+  "entries": [
+    {
+      "id": "AUD-EC1DCDFB",
+      "timestamp": "2026-10-29T16:15:13.933254+05:30",
+      "actor_id": "USR-001",
+      "actor_name": "Rajesh Sharma",
+      "actor_role": "ADMIN",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-001",
+      "details": "User @admin (ADMIN) signed in.",
+      "ip_address": "127.0.0.1"
+    },
+    {
+      "id": "AUD-7FF23474",
+      "timestamp": "2026-10-29T16:09:41.941833+05:30",
+      "actor_id": "USR-001",
+      "actor_name": "Rajesh Sharma",
+      "actor_role": "ADMIN",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-001",
+      "details": "User @admin (ADMIN) signed in.",
+      "ip_address": "127.0.0.1"
+    },
+    {
+      "id": "AUD-CB3AEA54",
+      "timestamp": "2026-10-29T18:30:00+05:30",
+      "actor_id": "USR-001",
+      "actor_name": "Rajesh Sharma",
+      "actor_role": "ADMIN",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-001",
+      "details": "User @admin (ADMIN) signed in.",
+      "ip_address": "127.0.0.1"
+    },
+    {
+      "id": "AUD-EAB1F6A2",
+      "timestamp": "2026-10-29T15:12:36.171101+05:30",
+      "actor_id": "USR-001",
+      "actor_name": "Rajesh Sharma",
+      "actor_role": "ADMIN",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-001",
+      "details": "User @admin (ADMIN) signed in.",
+      "ip_address": "127.0.0.1"
+    },
+    {
+      "id": "AUD-AD81D2B7",
+      "timestamp": "2026-10-29T15:05:13.199036+05:30",
+      "actor_id": "USR-001",
+      "actor_name": "Rajesh Sharma",
+      "actor_role": "ADMIN",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-001",
+      "details": "User @admin (ADMIN) signed in.",
+      "ip_address": "127.0.0.1"
+    },
+    {
+      "id": "AUD-0C64124D",
+      "timestamp": "2026-10-29T14:29:19.209352+05:30",
+      "actor_id": "USR-001",
+      "actor_name": "Rajesh Sharma",
+      "actor_role": "ADMIN",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-001",
+      "details": "User @admin (ADMIN) signed in.",
+      "ip_address": "127.0.0.1"
+    },
+    {
+      "id": "AUD-158124C2",
+      "timestamp": "2026-10-29T13:56:38.664795+05:30",
+      "actor_id": "USR-002",
+      "actor_name": "Priya Nair",
+      "actor_role": "USER",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-002",
+      "details": "User @priya (USER) signed in.",
+      "ip_address": "127.0.0.1"
+    },
+    {
+      "id": "AUD-E9E9054E",
+      "timestamp": "2026-10-29T13:56:19.265753+05:30",
+      "actor_id": "USR-001",
+      "actor_name": "Rajesh Sharma",
+      "actor_role": "ADMIN",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-001",
+      "details": "User @admin (ADMIN) signed in.",
+      "ip_address": "127.0.0.1"
+    },
+    {
+      "id": "AUD-4F586452",
+      "timestamp": "2026-10-29T13:46:19.293372+05:30",
+      "actor_id": "USR-003",
+      "actor_name": "Arjun Mehta",
+      "actor_role": "USER",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-003",
+      "details": "User @arjun (USER) signed in.",
+      "ip_address": "127.0.0.1"
+    },
+    {
+      "id": "AUD-9DADCECC",
+      "timestamp": "2026-10-29T13:46:17.844582+05:30",
+      "actor_id": "USR-005",
+      "actor_name": "Vikram Singh",
+      "actor_role": "USER",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-005",
+      "details": "User @vikram (USER) signed in.",
+      "ip_address": "127.0.0.1"
+    },
+    {
+      "id": "AUD-93BE82DA",
+      "timestamp": "2026-10-29T13:46:16.047936+05:30",
+      "actor_id": "USR-002",
+      "actor_name": "Priya Nair",
+      "actor_role": "USER",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-002",
+      "details": "User @priya (USER) signed in.",
+      "ip_address": "127.0.0.1"
+    },
+    {
+      "id": "AUD-17A0E5E5",
+      "timestamp": "2026-10-29T13:46:14.437665+05:30",
+      "actor_id": "USR-001",
+      "actor_name": "Rajesh Sharma",
+      "actor_role": "ADMIN",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-001",
+      "details": "User @admin (ADMIN) signed in.",
+      "ip_address": "127.0.0.1"
+    },
+    {
+      "id": "AUD-61F4BD0C",
+      "timestamp": "2026-10-29T13:46:13.065384+05:30",
+      "actor_id": "USR-001",
+      "actor_name": "Rajesh Sharma",
+      "actor_role": "ADMIN",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-001",
+      "details": "User @admin (ADMIN) signed in.",
+      "ip_address": "127.0.0.1"
+    },
+    {
+      "id": "AUD-BC6455FE",
+      "timestamp": "2026-10-29T13:46:07.983796+05:30",
+      "actor_id": "USR-001",
+      "actor_name": "Rajesh Sharma",
+      "actor_role": "ADMIN",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-001",
+      "details": "User @admin (ADMIN) signed in.",
+      "ip_address": "127.0.0.1"
+    }
+  ]
+}
