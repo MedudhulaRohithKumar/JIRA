@@ -31,7 +31,9 @@ from fastapi import HTTPException
 from backend.app import (
     add_task_comment,
     create_task,
+    create_team,
     create_user,
+    delete_team,
     delete_user,
     extend_task_timeline,
     get_daily_status,
@@ -39,9 +41,11 @@ from backend.app import (
     lambda_handler,
     list_all_user_comments,
     list_tasks,
+    list_teams,
     list_users,
     login,
     submit_or_update_daily_status,
+    update_team,
     update_user,
 )
 from backend.config import set_clock_override, today_str
@@ -53,6 +57,8 @@ from backend.models import (
     TaskCreateRequest,
     TaskPriority,
     TaskType,
+    TeamCreateRequest,
+    TeamUpdateRequest,
     TimelineExtendRequest,
     UserCreateRequest,
     UserRole,
@@ -130,6 +136,40 @@ def run_all_tests() -> None:
     del_u_res = delete_user(meera_id, admin_user=admin_user)
     assert del_u_res["deleted_user_id"] == meera_id
     print("[PASS] 3. Admin User CRUD (Add, Edit, Delete) verified.")
+
+    # 3b. Verify Team Creation & Management Mechanism (DevOps & Custom Teams)
+    teams_res = list_teams(current_user=admin_user)
+    assert teams_res["total"] >= 1
+    devops_team = next((tm for tm in teams_res["teams"] if tm["id"] == "TEAM-DEVOPS"), None)
+    assert devops_team is not None, "TEAM-DEVOPS should be seeded"
+    assert "USR-001" in devops_team["member_ids"]
+
+    # Admin creates new team
+    new_team_res = create_team(
+        TeamCreateRequest(
+            name="Cloud SRE & Incident Response",
+            description="Dedicated squad for 24/7 reliability and infrastructure automation.",
+            lead_id=admin_user["id"],
+            member_ids=[admin_user["id"]],
+        ),
+        admin_user=admin_user,
+    )
+    sre_team = new_team_res["team"]
+    sre_team_id = sre_team["id"]
+    assert sre_team["name"] == "Cloud SRE & Incident Response"
+
+    # Admin updates team
+    up_team_res = update_team(
+        sre_team_id,
+        TeamUpdateRequest(description="Updated scope: SRE, Chaos Engineering & VPC observability."),
+        admin_user=admin_user,
+    )
+    assert "Chaos Engineering" in up_team_res["team"]["description"]
+
+    # Admin deletes team
+    del_team_res = delete_team(sre_team_id, admin_user=admin_user)
+    assert del_team_res["deleted_team"]["id"] == sre_team_id
+    print("[PASS] 3b. Team Creation, Member Assignment & Squad Management verified.")
 
     # 4. Verify Admin Design Task Assignment & Timeline Extension
     today = today_str()

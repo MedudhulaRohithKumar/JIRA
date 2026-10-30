@@ -90,8 +90,9 @@ class UserCreateRequest(BaseModel):
     email: str = Field(..., min_length=5, max_length=120)
     password: str = Field(..., min_length=6, max_length=128)
     role: UserRole = UserRole.USER
-    department: str = Field(default="Design & Engineering", max_length=80)
+    department: str = Field(default="DevOps & Cloud Engineering", max_length=80)
     designation: str = Field(default="Team Member", max_length=80)
+    team_id: Optional[str] = Field(default=None, max_length=80)
     is_active: bool = True
 
 
@@ -102,7 +103,24 @@ class UserUpdateRequest(BaseModel):
     role: Optional[UserRole] = None
     department: Optional[str] = Field(default=None, max_length=80)
     designation: Optional[str] = Field(default=None, max_length=80)
+    team_id: Optional[str] = Field(default=None, max_length=80)
     is_active: Optional[bool] = None
+
+
+# --- Team & Squad Schemas ---
+
+class TeamCreateRequest(BaseModel):
+    name: str = Field(..., min_length=2, max_length=100)
+    description: str = Field(default="", max_length=500)
+    lead_id: Optional[str] = Field(default=None, max_length=80)
+    member_ids: List[str] = Field(default_factory=list)
+
+
+class TeamUpdateRequest(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=2, max_length=100)
+    description: Optional[str] = Field(default=None, max_length=500)
+    lead_id: Optional[str] = Field(default=None, max_length=80)
+    member_ids: Optional[List[str]] = None
 
 
 # --- Task & Workflow Schemas ---

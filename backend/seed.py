@@ -14,6 +14,7 @@ from backend.security import hash_password
 
 def ensure_seed_data() -> None:
     """Seed S3 Document DB if `db/users.json` has no users."""
+    ensure_teams_seed()
     users_doc = db.read_document("db/users.json", default={"users": []})
     if users_doc.get("users"):
         return
@@ -553,3 +554,66 @@ def ensure_seed_data() -> None:
         resource_id="CSR-WORKFLOW-MANAGER",
         details="Initialized S3 Document DB with internal team members, CSR tasks, and 8:00 PM Daily Status workflow.",
     )
+
+
+def ensure_teams_seed() -> None:
+    """Seed S3 Document DB `db/teams.json` if it does not exist, and link users."""
+    teams_doc = db.read_document("db/teams.json", default={"teams": []})
+    if not teams_doc.get("teams"):
+        now = now_local()
+        now_iso = now.isoformat()
+        seeded_teams = [
+            {
+                "id": "TEAM-DEVOPS",
+                "name": "DevOps & Cloud Infrastructure",
+                "slug": "devops",
+                "description": "DevOps automation, AWS Lambda, Private VPC, CloudWatch, and CI/CD pipelines.",
+                "lead_id": "USR-001",
+                "member_ids": ["USR-001", "USR-004", "USR-006", "USR-007"],
+                "created_at": now_iso,
+                "updated_at": now_iso,
+            },
+            {
+                "id": "TEAM-ENG",
+                "name": "Product & UI Engineering",
+                "slug": "engineering",
+                "description": "Frontend and backend engineering and API integrations.",
+                "lead_id": "USR-003",
+                "member_ids": ["USR-003", "USR-008"],
+                "created_at": now_iso,
+                "updated_at": now_iso,
+            },
+            {
+                "id": "TEAM-DESIGN",
+                "name": "UI/UX & Product Design",
+                "slug": "design",
+                "description": "Design systems, prototyping, and user workflow.",
+                "lead_id": "USR-002",
+                "member_ids": ["USR-002", "USR-005"],
+                "created_at": now_iso,
+                "updated_at": now_iso,
+            },
+        ]
+        db.put_document_conditional("db/teams.json", {"teams": seeded_teams})
+
+    def _ensure_user_teams(doc: dict[str, Any]) -> tuple[dict[str, Any], bool]:
+        users = doc.get("users", [])
+        changed = False
+        for u in users:
+            if not u.get("team_id"):
+                dept = (u.get("department") or "").lower()
+                if any(k in dept for k in ("cloud", "architecture", "security", "ops", "devops", "management")):
+                    u["team_id"] = "TEAM-DEVOPS"
+                elif "design" in dept:
+                    u["team_id"] = "TEAM-DESIGN"
+                else:
+                    u["team_id"] = "TEAM-ENG"
+                changed = True
+        return doc, changed
+
+    try:
+        users_doc = db.read_document("db/users.json", default={"users": []})
+        if users_doc.get("users") and any(not u.get("team_id") for u in users_doc["users"]):
+            db.atomic_update("db/users.json", default={"users": []}, mutator_fn=_ensure_user_teams)
+    except Exception:
+        pass

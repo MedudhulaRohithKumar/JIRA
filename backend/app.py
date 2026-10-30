@@ -40,6 +40,8 @@ from backend.models import (
     TaskCreateRequest,
     TaskStatus,
     TaskUpdateRequest,
+    TeamCreateRequest,
+    TeamUpdateRequest,
     TimelineExtendRequest,
     UserCreateRequest,
     UserUpdateRequest,
@@ -273,6 +275,7 @@ def create_user(
             "role": payload.role.value,
             "department": payload.department.strip(),
             "designation": payload.designation.strip(),
+            "team_id": (payload.team_id.strip() if payload.team_id else "TEAM-DEVOPS"),
             "avatar_color": AVATAR_COLORS[next_num % len(AVATAR_COLORS)],
             "is_active": payload.is_active,
             "created_at": now_iso,
@@ -320,6 +323,8 @@ def update_user(
                     u["department"] = payload.department.strip()
                 if payload.designation is not None:
                     u["designation"] = payload.designation.strip()
+                if payload.team_id is not None:
+                    u["team_id"] = payload.team_id.strip()
                 if payload.is_active is not None:
                     if user_id == admin_user["id"] and not payload.is_active:
                         raise HTTPException(
@@ -379,6 +384,199 @@ def delete_user(
 
 
 # ---------------------------------------------------------------------------
+# 3b. Teams & Squads Management (Admin can Add, Edit, Delete Teams)
+# ---------------------------------------------------------------------------
+
+@app.get("/api/teams")
+def list_teams(current_user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:
+    teams_doc = db.read_document("db/teams.json", default={"teams": []})
+    users_doc = db.read_document("db/users.json", default={"users": []})
+    tasks_doc = db.read_document("db/tasks.json", default={"tasks": []})
+
+    users_map = {u["id"]: sanitize_user(u) for u in users_doc.get("users", [])}
+    tasks = tasks_doc.get("tasks", [])
+    teams = teams_doc.get("teams", [])
+
+    enriched_teams = []
+    for team in teams:
+        team_copy = dict(team)
+        lead_id = team.get("lead_id")
+        lead = users_map.get(lead_id) if lead_id else None
+        team_copy["lead_name"] = lead.get("full_name", "") if lead else ""
+        team_copy["lead_email"] = lead.get("email", "") if lead else ""
+        team_copy["lead_username"] = lead.get("username", "") if lead else ""
+
+        member_ids = team.get("member_ids", [])
+        team_members = [users_map[mid] for mid in member_ids if mid in users_map]
+        team_copy["members"] = team_members
+        team_copy["member_count"] = len(team_members)
+
+        team_member_set = set(member_ids)
+        team_tasks = [t for t in tasks if t.get("assignee_id") in team_member_set]
+        team_copy["total_tasks"] = len(team_tasks)
+        team_copy["done_tasks"] = sum(1 for t in team_tasks if t.get("status") == "DONE")
+        team_copy["active_tasks"] = sum(1 for t in team_tasks if t.get("status") in ("TODO", "IN_PROGRESS", "IN_REVIEW"))
+        team_copy["blocked_tasks"] = sum(1 for t in team_tasks if t.get("status") == "BLOCKED" or t.get("has_blocker"))
+
+        enriched_teams.append(team_copy)
+
+    return {
+        "total": len(enriched_teams),
+        "teams": enriched_teams,
+    }
+
+
+@app.post("/api/teams", status_code=status.HTTP_201_CREATED)
+def create_team(
+    payload: TeamCreateRequest,
+    admin_user: dict[str, Any] = Depends(require_admin),
+) -> dict[str, Any]:
+    now_iso = now_local().isoformat()
+
+    def _mutate_teams(doc: dict[str, Any]) -> Tuple[dict[str, Any], dict[str, Any]]:
+        teams: list[dict[str, Any]] = doc.get("teams", [])
+        norm_name = payload.name.strip()
+        for t in teams:
+            if t["name"].strip().lower() == norm_name.lower():
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Team with name '{norm_name}' already exists.",
+                )
+
+        slug = "".join(c if c.isalnum() else "-" for c in norm_name.lower()).strip("-")
+        team_id = f"TEAM-{slug[:16].upper()}-{uuid.uuid4().hex[:4].upper()}"
+        new_team = {
+            "id": team_id,
+            "name": norm_name,
+            "slug": slug,
+            "description": payload.description.strip(),
+            "lead_id": payload.lead_id,
+            "member_ids": payload.member_ids,
+            "created_at": now_iso,
+            "updated_at": now_iso,
+        }
+        teams.append(new_team)
+        doc["teams"] = teams
+        return doc, new_team
+
+    created_team = db.atomic_update("db/teams.json", default={"teams": []}, mutator_fn=_mutate_teams)
+
+    if payload.member_ids:
+        def _update_users(udoc: dict[str, Any]) -> Tuple[dict[str, Any], Any]:
+            for u in udoc.get("users", []):
+                if u["id"] in payload.member_ids:
+                    u["team_id"] = created_team["id"]
+            return udoc, True
+        db.atomic_update("db/users.json", default={"users": []}, mutator_fn=_update_users)
+
+    db.append_audit_log(
+        actor_id=admin_user["id"],
+        actor_name=admin_user["full_name"],
+        actor_role=admin_user["role"],
+        action="TEAM_CREATED",
+        resource_type="TEAM",
+        resource_id=created_team["id"],
+        details=f"Admin created team '{created_team['name']}' with {len(payload.member_ids)} members.",
+    )
+    return {"team": created_team}
+
+
+@app.get("/api/teams/{team_id}")
+def get_team(team_id: str, current_user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:
+    teams_doc = db.read_document("db/teams.json", default={"teams": []})
+    for t in teams_doc.get("teams", []):
+        if t["id"] == team_id or t.get("slug") == team_id.lower():
+            return {"team": t}
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found.")
+
+
+@app.put("/api/teams/{team_id}")
+@app.patch("/api/teams/{team_id}")
+def update_team(
+    team_id: str,
+    payload: TeamUpdateRequest,
+    admin_user: dict[str, Any] = Depends(require_admin),
+) -> dict[str, Any]:
+    now_iso = now_local().isoformat()
+
+    def _mutate(doc: dict[str, Any]) -> Tuple[dict[str, Any], dict[str, Any]]:
+        teams: list[dict[str, Any]] = doc.get("teams", [])
+        for t in teams:
+            if t["id"] == team_id or t.get("slug") == team_id.lower():
+                if payload.name is not None:
+                    t["name"] = payload.name.strip()
+                if payload.description is not None:
+                    t["description"] = payload.description.strip()
+                if payload.lead_id is not None:
+                    t["lead_id"] = payload.lead_id
+                if payload.member_ids is not None:
+                    t["member_ids"] = payload.member_ids
+                t["updated_at"] = now_iso
+                doc["teams"] = teams
+                return doc, t
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found.")
+
+    updated_team = db.atomic_update("db/teams.json", default={"teams": []}, mutator_fn=_mutate)
+
+    if payload.member_ids is not None:
+        def _sync_members(udoc: dict[str, Any]) -> Tuple[dict[str, Any], Any]:
+            for u in udoc.get("users", []):
+                if u["id"] in payload.member_ids:
+                    u["team_id"] = team_id
+                elif u.get("team_id") == team_id:
+                    u["team_id"] = None
+            return udoc, True
+        db.atomic_update("db/users.json", default={"users": []}, mutator_fn=_sync_members)
+
+    db.append_audit_log(
+        actor_id=admin_user["id"],
+        actor_name=admin_user["full_name"],
+        actor_role=admin_user["role"],
+        action="TEAM_UPDATED",
+        resource_type="TEAM",
+        resource_id=team_id,
+        details=f"Admin updated team '{updated_team['name']}'.",
+    )
+    return {"team": updated_team}
+
+
+@app.delete("/api/teams/{team_id}")
+def delete_team(
+    team_id: str,
+    admin_user: dict[str, Any] = Depends(require_admin),
+) -> dict[str, Any]:
+    def _mutate(doc: dict[str, Any]) -> Tuple[dict[str, Any], dict[str, Any]]:
+        teams: list[dict[str, Any]] = doc.get("teams", [])
+        for idx, t in enumerate(teams):
+            if t["id"] == team_id or t.get("slug") == team_id.lower():
+                removed = teams.pop(idx)
+                doc["teams"] = teams
+                return doc, removed
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found.")
+
+    removed_team = db.atomic_update("db/teams.json", default={"teams": []}, mutator_fn=_mutate)
+
+    def _clear_user_team(udoc: dict[str, Any]) -> Tuple[dict[str, Any], Any]:
+        for u in udoc.get("users", []):
+            if u.get("team_id") == team_id:
+                u["team_id"] = None
+        return udoc, True
+    db.atomic_update("db/users.json", default={"users": []}, mutator_fn=_clear_user_team)
+
+    db.append_audit_log(
+        actor_id=admin_user["id"],
+        actor_name=admin_user["full_name"],
+        actor_role=admin_user["role"],
+        action="TEAM_DELETED",
+        resource_type="TEAM",
+        resource_id=team_id,
+        details=f"Admin deleted team '{removed_team['name']}'.",
+    )
+    return {"message": f"Team '{removed_team['name']}' deleted.", "deleted_team": removed_team}
+
+
+
+# ---------------------------------------------------------------------------
 # 4. Tasks / Jira Workflow (Assign Design Tasks, Extend Timelines, Blockers/Remarks)
 # ---------------------------------------------------------------------------
 
@@ -395,6 +593,7 @@ def _enrich_tasks(tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
         copy_t["assignee_name"] = assignee["full_name"] if assignee else "Unassigned"
         copy_t["assignee_username"] = assignee["username"] if assignee else ""
         copy_t["assignee_department"] = assignee.get("department", "") if assignee else ""
+        copy_t["assignee_team_id"] = assignee.get("team_id", "") if assignee else ""
         copy_t["assignee_color"] = assignee.get("avatar_color", "#475569") if assignee else "#475569"
         copy_t["reporter_name"] = reporter["full_name"] if reporter else "Manager"
         copy_t["is_overdue"] = (
@@ -413,12 +612,20 @@ def list_tasks(
     task_type: Optional[str] = Query(default=None),
     priority: Optional[str] = Query(default=None),
     sprint_id: Optional[str] = Query(default=None),
+    team_id: Optional[str] = Query(default=None),
     has_blocker: Optional[bool] = Query(default=None),
     search: Optional[str] = Query(default=None),
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> dict[str, Any]:
     tasks_doc = db.read_document("db/tasks.json", default={"next_seq": 101, "tasks": []})
     tasks = _enrich_tasks(tasks_doc.get("tasks", []))
+
+    if team_id and team_id.upper() != "ALL":
+        teams_doc = db.read_document("db/teams.json", default={"teams": []})
+        matched_team = next((tm for tm in teams_doc.get("teams", []) if tm["id"] == team_id or tm.get("slug") == team_id.lower()), None)
+        if matched_team:
+            member_set = set(matched_team.get("member_ids", []))
+            tasks = [t for t in tasks if t.get("assignee_id") in member_set]
 
     if assignee_id:
         tasks = [t for t in tasks if t.get("assignee_id") == assignee_id]

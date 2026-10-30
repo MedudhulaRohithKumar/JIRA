@@ -1,0 +1,73 @@
+name: Deploy CSR Work Flow Manager to AWS Lambda
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Package and Deploy to AWS Lambda
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          mkdir -p build
+          # Install dependencies into build directory targeting Linux Lambda
+          pip install --target ./build -r requirements.txt --platform manylinux2014_x86_64 --only-binary=:all: --upgrade || pip install --target ./build -r requirements.txt
+
+      - name: Bundle Application Code & Frontend SPA
+        run: |
+          # Copy backend package and frontend static assets
+          cp -r backend build/
+          cp -r frontend build/
+
+          # Create Lambda deployment zip archive
+          cd build
+          zip -q -r ../lambda_artifact.zip .
+          cd ..
+          ls -lh lambda_artifact.zip
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'ap-south-1' }}
+
+      - name: Deploy Code to AWS Lambda
+        run: |
+          echo "Updating Lambda function code for ${{ secrets.LAMBDA_FUNCTION_NAME }}..."
+          aws lambda update-function-code \
+            --function-name "${{ secrets.LAMBDA_FUNCTION_NAME }}" \
+            --zip-file fileb://lambda_artifact.zip
+
+          echo "Waiting for Lambda function code update to complete..."
+          aws lambda wait function-updated \
+            --function-name "${{ secrets.LAMBDA_FUNCTION_NAME }}"
+
+      - name: Update Lambda Environment Variables
+        run: |
+          echo "Updating Lambda environment variables..."
+          aws lambda update-function-configuration \
+            --function-name "${{ secrets.LAMBDA_FUNCTION_NAME }}" \
+            --environment "Variables={
+              STORAGE_MODE=s3,
+              S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }},
+              ENV_STAGE=priv-vpc-prod,
+              APP_TIMEZONE=Asia/Kolkata,
+              DAILY_CUTOFF_HOUR=20,
+              DAILY_CUTOFF_MINUTE=0,
+              JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY || 'csr-internal-jwt-prod-secret-change-me' }}
+            }"

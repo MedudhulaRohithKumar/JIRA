@@ -1,0 +1,101 @@
+{
+  "date": "2026-10-30",
+  "entries": [
+    {
+      "id": "AUD-30857D13",
+      "timestamp": "2026-10-30T13:31:02.097734+05:30",
+      "actor_id": "USR-001",
+      "actor_name": "Rajesh Sharma",
+      "actor_role": "ADMIN",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-001",
+      "details": "User @admin (ADMIN) signed in.",
+      "ip_address": "127.0.0.1"
+    },
+    {
+      "id": "AUD-DDF80BEA",
+      "timestamp": "2026-10-30T13:31:01.458156+05:30",
+      "actor_id": "USR-001",
+      "actor_name": "Rajesh Sharma",
+      "actor_role": "ADMIN",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-001",
+      "details": "User @admin (ADMIN) signed in.",
+      "ip_address": "127.0.0.1"
+    },
+    {
+      "id": "AUD-72795EFF",
+      "timestamp": "2026-10-30T13:06:13.079564+05:30",
+      "actor_id": "USR-001",
+      "actor_name": "Rajesh Sharma",
+      "actor_role": "ADMIN",
+      "action": "TEAM_DELETED",
+      "resource_type": "TEAM",
+      "resource_id": "TEAM-PLATFORM-SRE-SQU-1713",
+      "details": "Admin deleted team 'Platform SRE Squad'.",
+      "ip_address": "internal-vpc"
+    },
+    {
+      "id": "AUD-94734351",
+      "timestamp": "2026-10-30T13:06:12.971969+05:30",
+      "actor_id": "USR-001",
+      "actor_name": "Rajesh Sharma",
+      "actor_role": "ADMIN",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-001",
+      "details": "User @admin (ADMIN) signed in.",
+      "ip_address": "127.0.0.1"
+    },
+    {
+      "id": "AUD-9618499C",
+      "timestamp": "2026-10-30T13:06:04.599574+05:30",
+      "actor_id": "USR-001",
+      "actor_name": "Rajesh Sharma",
+      "actor_role": "ADMIN",
+      "action": "TEAM_CREATED",
+      "resource_type": "TEAM",
+      "resource_id": "TEAM-PLATFORM-SRE-SQU-1713",
+      "details": "Admin created team 'Platform SRE Squad' with 2 members.",
+      "ip_address": "internal-vpc"
+    },
+    {
+      "id": "AUD-2597CCA6",
+      "timestamp": "2026-10-30T13:06:04.530710+05:30",
+      "actor_id": "USR-001",
+      "actor_name": "Rajesh Sharma",
+      "actor_role": "ADMIN",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-001",
+      "details": "User @admin (ADMIN) signed in.",
+      "ip_address": "127.0.0.1"
+    },
+    {
+      "id": "AUD-049F5870",
+      "timestamp": "2026-10-30T13:05:54.823474+05:30",
+      "actor_id": "USR-001",
+      "actor_name": "Rajesh Sharma",
+      "actor_role": "ADMIN",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-001",
+      "details": "User @admin (ADMIN) signed in.",
+      "ip_address": "127.0.0.1"
+    },
+    {
+      "id": "AUD-159CBA31",
+      "timestamp": "2026-10-30T12:36:27.924606+05:30",
+      "actor_id": "USR-001",
+      "actor_name": "Rajesh Sharma",
+      "actor_role": "ADMIN",
+      "action": "USER_LOGIN",
+      "resource_type": "AUTH",
+      "resource_id": "USR-001",
+      "details": "User @admin (ADMIN) signed in.",
+      "ip_address": "127.0.0.1"
+    }
+  ]
+}

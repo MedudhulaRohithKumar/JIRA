@@ -15,10 +15,12 @@ const state = {
   user: null,
   systemInfo: null,
   activeTab: "board", // board | backlog | timeline | analytics | daily | users | comments
-  bwMode: localStorage.getItem("csr_bw_mode") || "light", // light (Notion White Workspace) | dark (Notion Dark Workspace)
-  textSize: localStorage.getItem("csr_mac_text_size") || "normal", // compact | normal | large
+  bwMode: localStorage.getItem("csr_bw_mode") || "dark", // default dark
+  textSize: "compact", // default compact (A-)
   loginRoleHint: "Admin",
   users: [],
+  teams: [],
+  selectedTeamFilter: "ALL", // ALL | TEAM-DEVOPS | ...
   tasks: [],
   sprints: [],
   analytics: null,
@@ -60,8 +62,8 @@ function setBwMode(mode) {
 }
 
 function setTextSize(size) {
-  state.textSize = ["compact", "normal", "large"].includes(size) ? size : "normal";
-  localStorage.setItem("csr_mac_text_size", state.textSize);
+  state.textSize = "compact";
+  localStorage.setItem("csr_mac_text_size", "compact");
   applyVisualPreferences();
   render();
 }
@@ -82,14 +84,8 @@ function renderTopPreferenceControls() {
         </button>
       </div>
       <div class="notion-segmented" role="group" aria-label="Text Size">
-        <button type="button" class="notion-segmented-btn ${state.textSize === "compact" ? "active" : ""}" onclick="setTextSize('compact')" title="Compact 13px">
+        <button type="button" class="notion-segmented-btn active" onclick="setTextSize('compact')" title="Text Size: A- (Compact)">
           A-
-        </button>
-        <button type="button" class="notion-segmented-btn ${state.textSize === "normal" ? "active" : ""}" onclick="setTextSize('normal')" title="Default 14px">
-          A
-        </button>
-        <button type="button" class="notion-segmented-btn ${state.textSize === "large" ? "active" : ""}" onclick="setTextSize('large')" title="Large 16px">
-          A+
         </button>
       </div>
     </div>
@@ -310,6 +306,9 @@ async function refreshWorkspaceData() {
     apiFetch("/api/users")
       .then((d) => (state.users = d.users || []))
       .catch((err) => console.warn("users fetch:", err)),
+    apiFetch("/api/teams")
+      .then((d) => (state.teams = d.teams || []))
+      .catch((err) => console.warn("teams fetch:", err)),
     apiFetch("/api/tasks")
       .then((d) => {
         state.tasks = d.tasks || [];
@@ -663,6 +662,12 @@ function renderJiraMacDashboard() {
       count: `${dailyComp.submitted_count || 0}/${dailyComp.total_members || state.users.length}`,
     },
     {
+      id: "teams",
+      icon: "🏢",
+      label: isAdmin ? "Teams (Create & Manage)" : "Teams & Squads",
+      count: state.teams.length,
+    },
+    {
       id: "users",
       icon: "👥",
       label: isAdmin ? "People (Add/Edit/Delete)" : "People & Roster",
@@ -682,6 +687,7 @@ function renderJiraMacDashboard() {
     timeline: "Timeline & Deadlines",
     analytics: "Reports & Analytics",
     daily: "8:00 PM Daily Status",
+    teams: isAdmin ? "Teams (Create & Manage Squads)" : "Teams & Squads Directory",
     users: isAdmin ? "People (Add/Edit/Delete)" : "People & Team Directory",
     comments: "Activity & Comments Feed",
   };
@@ -796,6 +802,9 @@ function renderJiraMacDashboard() {
                 <button type="button" class="btn-bw-glass btn-block" onclick="openCreateUserDialog()">
                   + Add Team Member
                 </button>
+                <button type="button" class="btn-bw-glass btn-block" onclick="openCreateTeamDialog()">
+                  + Create Team / Squad
+                </button>
                 <button type="button" class="btn-bw-glass btn-block" onclick="switchTab('users')">
                   ✎ Edit / Delete Users (${state.users.length})
                 </button>
@@ -864,6 +873,8 @@ function renderActiveJiraView() {
       return renderAnalyticsView();
     case "daily":
       return renderDailyStatusView();
+    case "teams":
+      return renderTeamsView();
     case "users":
       return renderUsersDirectoryView();
     case "comments":
@@ -879,6 +890,13 @@ function renderActiveJiraView() {
 
 function getFilteredTasks() {
   return state.tasks.filter((t) => {
+    if (state.selectedTeamFilter && state.selectedTeamFilter !== "ALL") {
+      const activeTeam = state.teams.find((tm) => tm.id === state.selectedTeamFilter);
+      if (activeTeam && !(activeTeam.member_ids || []).includes(t.assignee_id)) {
+        return false;
+      }
+    }
+
     const f = state.taskFilters;
     if (f.status && t.status !== f.status) return false;
     if (f.priority && t.priority !== f.priority) return false;
@@ -916,6 +934,17 @@ function toggleAssigneeFilter(userId) {
 
 function setQuickFilter(qf) {
   state.taskFilters.quick_filter = state.taskFilters.quick_filter === qf && qf !== "ALL" ? "ALL" : qf;
+  render();
+}
+
+function filterByTeam(teamId) {
+  state.selectedTeamFilter = teamId;
+  render();
+}
+
+function focusTeam(teamId) {
+  state.selectedTeamFilter = teamId;
+  state.activeTab = "board";
   render();
 }
 
@@ -976,6 +1005,21 @@ function renderJiraActiveSprintBoardView() {
               value="${esc(state.taskFilters.search)}"
               oninput="setTaskFilter('search', this.value)"
             />
+
+            <!-- Team Filter Selector -->
+            <select
+              class="glass-select"
+              style="padding: 0.15rem 0.5rem; height: 28px; font-size: var(--fs-xs); max-width: 175px;"
+              onchange="filterByTeam(this.value)"
+              title="Filter by Team / Squad"
+            >
+              <option value="ALL" ${state.selectedTeamFilter === "ALL" ? "selected" : ""}>🏢 All Teams</option>
+              ${state.teams.map((tm) => `
+                <option value="${esc(tm.id)}" ${state.selectedTeamFilter === tm.id ? "selected" : ""}>
+                  ${esc(tm.name)}
+                </option>
+              `).join("")}
+            </select>
 
             <!-- Clickable Jira Avatar Stack -->
             <div class="jira-avatar-stack" role="group" aria-label="Filter by Assignee Avatar">
@@ -2617,6 +2661,130 @@ async function simulateClock(hour, minute) {
 }
 
 /* --------------------------------------------------------------------------
+   12b. JIRA VIEW: TEAMS & SQUADS MANAGEMENT (CREATE, EDIT, ASSIGN TEAMS)
+   -------------------------------------------------------------------------- */
+
+function renderTeamsView() {
+  const isAdmin = isAdminUser();
+
+  return `
+    <div class="mac-content-scroll">
+      <section class="glass-card section-card">
+        <div class="section-card-header">
+          <div>
+            <h2 class="section-card-title">
+              🏢 Teams & Squads Administration
+            </h2>
+            <p class="section-card-subtitle">
+              ${state.teams.length} teams configured • Organize your DevOps, Engineering & Custom squads
+            </p>
+          </div>
+          <div style="display:flex;gap:0.5rem;align-items:center;">
+            ${
+              state.selectedTeamFilter !== "ALL"
+                ? `<button type="button" class="btn-bw-glass btn-sm" onclick="filterByTeam('ALL')">
+                    ✕ Clear Team Filter
+                   </button>`
+                : ""
+            }
+            ${
+              isAdmin
+                ? `<button type="button" class="btn-bw-primary" onclick="openCreateTeamDialog()">
+                    + Create New Team
+                   </button>`
+                : ""
+            }
+          </div>
+        </div>
+
+        <!-- TEAMS GRID -->
+        <div class="user-cards-grid" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));">
+          ${state.teams
+            .map((tm) => {
+              const isSelected = state.selectedTeamFilter === tm.id;
+              const memberIds = tm.member_ids || [];
+              const members = state.users.filter((u) => memberIds.includes(u.id));
+              const lead = state.users.find((u) => u.id === tm.lead_id);
+              const teamTasks = state.tasks.filter((t) => memberIds.includes(t.assignee_id));
+              const doneTasks = teamTasks.filter((t) => t.status === "DONE").length;
+
+              return `
+                <article class="user-glass-card ${isSelected ? "selected-team-card" : ""}" style="display:flex;flex-direction:column;justify-content:space-between;gap:0.75rem;">
+                  <div>
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem;">
+                      <div>
+                        <div style="font-size:var(--fs-md);font-weight:800;color:var(--text-primary);">
+                          ${esc(tm.name)}
+                        </div>
+                        <div style="font-size:var(--fs-2xs);color:var(--text-muted);font-family:var(--font-mono);">
+                          ${esc(tm.id)}
+                        </div>
+                      </div>
+                      <span class="bw-badge ${tm.id === 'TEAM-DEVOPS' ? 'bw-badge-solid' : 'bw-badge-outline'}">
+                        ${esc(tm.slug || 'team')}
+                      </span>
+                    </div>
+
+                    <p style="font-size:var(--fs-xs);color:var(--text-secondary);margin-top:0.4rem;line-height:1.4;">
+                      ${esc(tm.description || "No description provided.")}
+                    </p>
+                  </div>
+
+                  <div style="padding-block:0.4rem;border-block:1px solid var(--glass-divider);font-size:var(--fs-xs);display:flex;flex-direction:column;gap:0.35rem;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                      <span style="color:var(--text-muted);">Team Lead:</span>
+                      <strong>${esc(lead ? lead.full_name : tm.lead_name || "Unassigned")}</strong>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                      <span style="color:var(--text-muted);">Assigned Tasks:</span>
+                      <span class="tabular-nums">📋 <strong>${doneTasks}/${teamTasks.length}</strong> Done</span>
+                    </div>
+
+                    <!-- Member Avatar Badges -->
+                    <div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.25rem;">
+                      ${members.length > 0
+                        ? members.map(m => `
+                            <span class="notion-badge notion-badge-neutral" style="font-size:var(--fs-2xs);padding:2px 6px;" title="${esc(m.full_name)} (@${esc(m.username)})">
+                              <span class="mono-avatar" style="width:14px;height:14px;font-size:8px;margin-right:3px;">${esc(initials(m.full_name))}</span>
+                              ${esc(m.full_name.split(' ')[0])}
+                            </span>
+                          `).join("")
+                        : `<span style="font-size:var(--fs-2xs);color:var(--text-muted);">No members assigned yet</span>`
+                      }
+                    </div>
+                  </div>
+
+                  <div style="display:flex;gap:0.4rem;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+                    <button
+                      type="button"
+                      class="btn-bw-glass btn-sm ${isSelected ? 'active' : ''}"
+                      onclick="focusTeam('${esc(tm.id)}')"
+                      title="Filter Sprint Board & Backlog to this Team"
+                    >
+                      ${isSelected ? '✓ Viewing Team' : '🔍 Focus Board'}
+                    </button>
+                    ${isAdmin ? `
+                      <div style="display:flex;gap:0.3rem;">
+                        <button type="button" class="btn-bw-glass btn-sm" onclick="openEditTeamDialog('${esc(tm.id)}')">
+                          ✎ Edit
+                        </button>
+                        <button type="button" class="btn-bw-danger btn-sm" onclick="openDeleteTeamConfirmDialog('${esc(tm.id)}', '${esc(tm.name)}')">
+                          🗑 Delete
+                        </button>
+                      </div>
+                    ` : ""}
+                  </div>
+                </article>
+              `;
+            })
+            .join("")}
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+/* --------------------------------------------------------------------------
    13. JIRA VIEW 6: PEOPLE & USER ADMINISTRATION (ADD / EDIT / DELETE USERS)
    -------------------------------------------------------------------------- */
 
@@ -2665,7 +2833,7 @@ function renderUsersDirectoryView() {
                   </div>
 
                   <div style="display:flex;justify-content:space-between;align-items:center;padding-block:0.5rem;border-block:1px solid var(--glass-divider);font-size:var(--fs-xs);">
-                    <span>🏢 <strong>${esc(u.department || "Design")}</strong></span>
+                    <span>🏢 <strong>${esc(u.department || "General")}</strong> • <span class="notion-badge notion-badge-neutral" style="font-size:var(--fs-2xs);padding:1px 5px;">${esc((state.teams.find(tm => tm.id === u.team_id) || {}).name || "DevOps Team")}</span></span>
                     <span class="tabular-nums">📋 <strong>${uDone}/${uTasks.length}</strong> Done</span>
                   </div>
 
@@ -3107,10 +3275,18 @@ function openCreateUserDialog() {
           </div>
           <div class="form-group">
             <label class="form-label" for="cu-dept">Department</label>
-            <input id="cu-dept" type="text" class="glass-input" value="Design Studio" required />
+            <input id="cu-dept" type="text" class="glass-input" value="DevOps & Cloud Engineering" required />
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="cu-team">Assigned Team / Squad</label>
+            <select id="cu-team" class="glass-select">
+              ${state.teams.map(tm => `
+                <option value="${esc(tm.id)}" ${tm.id === "TEAM-DEVOPS" ? "selected" : ""}>${esc(tm.name)}</option>
+              `).join("")}
+            </select>
+          </div>
           <div class="form-group">
             <label class="form-label" for="cu-role">Access Role</label>
             <select id="cu-role" class="glass-select">
@@ -3118,10 +3294,10 @@ function openCreateUserDialog() {
               <option value="Admin">Admin (Manager)</option>
             </select>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="cu-password">Initial Password</label>
-            <input id="cu-password" type="text" class="glass-input" value="User@123" required />
-          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="cu-password">Initial Password</label>
+          <input id="cu-password" type="text" class="glass-input" value="User@123" required />
         </div>
       </div>
       <div class="dialog-footer">
@@ -3142,6 +3318,7 @@ async function handleCreateUserSubmit(e) {
         username: document.getElementById("cu-username").value.trim(),
         email: document.getElementById("cu-email").value.trim(),
         department: document.getElementById("cu-dept").value.trim(),
+        team_id: document.getElementById("cu-team") ? document.getElementById("cu-team").value : undefined,
         role: document.getElementById("cu-role").value,
         password: document.getElementById("cu-password").value,
       }),
@@ -3184,16 +3361,25 @@ function openEditUserDialog(userId) {
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
           <div class="form-group">
+            <label class="form-label" for="eu-team">Assigned Team / Squad</label>
+            <select id="eu-team" class="glass-select">
+              <option value="">-- No Team --</option>
+              ${state.teams.map(tm => `
+                <option value="${esc(tm.id)}" ${tm.id === u.team_id ? "selected" : ""}>${esc(tm.name)}</option>
+              `).join("")}
+            </select>
+          </div>
+          <div class="form-group">
             <label class="form-label" for="eu-role">Role</label>
             <select id="eu-role" class="glass-select">
               <option value="User" ${!isAdminUser(u) ? "selected" : ""}>User (Team Member)</option>
               <option value="Admin" ${isAdminUser(u) ? "selected" : ""}>Admin (Manager)</option>
             </select>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="eu-password">Reset Password (Optional)</label>
-            <input id="eu-password" type="password" class="glass-input" placeholder="Leave blank to keep existing" />
-          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="eu-password">Reset Password (Optional)</label>
+          <input id="eu-password" type="password" class="glass-input" placeholder="Leave blank to keep existing" />
         </div>
       </div>
       <div class="dialog-footer">
@@ -3210,6 +3396,7 @@ async function handleEditUserSubmit(e, userId) {
     full_name: document.getElementById("eu-fullname").value.trim(),
     email: document.getElementById("eu-email").value.trim(),
     department: document.getElementById("eu-dept").value.trim(),
+    team_id: document.getElementById("eu-team") ? document.getElementById("eu-team").value : undefined,
     role: document.getElementById("eu-role").value,
   };
   const pwd = document.getElementById("eu-password").value;
@@ -3267,5 +3454,193 @@ async function confirmDeleteUser(userId) {
     showToast(err.message, true);
   }
 }
+
+/* --------------------------------------------------------------------------
+   17. TEAM & SQUAD CRUD DIALOGS
+   -------------------------------------------------------------------------- */
+
+function openCreateTeamDialog() {
+  openDialog(`
+    <div class="dialog-header">
+      <div style="display:flex;align-items:center;gap:0.55rem;">
+        ${renderTrafficLights()}
+        <h2 id="csr-modal-title" style="font-size:var(--fs-lg);">+ Create New Team / Squad</h2>
+      </div>
+      <button type="button" class="btn-bw-glass btn-sm" onclick="closeDialog()">✕ Close</button>
+    </div>
+    <form onsubmit="handleCreateTeamSubmit(event)">
+      <div class="dialog-body">
+        <div class="form-group">
+          <label class="form-label" for="ct-name">Team Name</label>
+          <input id="ct-name" type="text" class="glass-input" placeholder="e.g. DevOps Team, Platform SRE, Cloud Security" required autofocus />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ct-desc">Description</label>
+          <textarea id="ct-desc" class="glass-textarea" rows="2" placeholder="Responsibilities and scope for this team..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ct-lead">Team Lead</label>
+          <select id="ct-lead" class="glass-select">
+            <option value="">-- Select Team Lead --</option>
+            ${state.users.map(u => `
+              <option value="${esc(u.id)}">${esc(u.full_name)} (@${esc(u.username)}) — ${esc(u.department || "")}</option>
+            `).join("")}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Assign Team Members</label>
+          <div style="max-height:160px;overflow-y:auto;border:1px solid var(--border-input);border-radius:var(--radius-sm);padding:0.5rem;display:flex;flex-direction:column;gap:0.35rem;background:var(--bg-hover);">
+            ${state.users.map(u => `
+              <label style="display:flex;align-items:center;gap:0.45rem;font-size:var(--fs-xs);cursor:pointer;">
+                <input type="checkbox" name="team-member-check" value="${esc(u.id)}" />
+                <span>${esc(u.full_name)} (@${esc(u.username)}) • <small style="color:var(--text-muted);">${esc(u.designation || u.department || "")}</small></span>
+              </label>
+            `).join("")}
+          </div>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn-bw-glass" onclick="closeDialog()">Cancel</button>
+        <button type="submit" class="btn-bw-primary">✓ Create Team</button>
+      </div>
+    </form>
+  `);
+}
+
+async function handleCreateTeamSubmit(e) {
+  e.preventDefault();
+  const name = document.getElementById("ct-name").value.trim();
+  const description = document.getElementById("ct-desc").value.trim();
+  const lead_id = document.getElementById("ct-lead").value || null;
+  const memberCheckboxes = document.querySelectorAll('input[name="team-member-check"]:checked');
+  const member_ids = Array.from(memberCheckboxes).map(cb => cb.value);
+
+  try {
+    await apiFetch("/api/teams", {
+      method: "POST",
+      body: JSON.stringify({ name, description, lead_id, member_ids }),
+    });
+    closeDialog();
+    await refreshWorkspaceData();
+    showToast(`Team '${name}' created successfully!`);
+    render();
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
+function openEditTeamDialog(teamId) {
+  const tm = state.teams.find(t => t.id === teamId);
+  if (!tm) return;
+  const currentMembers = new Set(tm.member_ids || []);
+
+  openDialog(`
+    <div class="dialog-header">
+      <div style="display:flex;align-items:center;gap:0.55rem;">
+        ${renderTrafficLights()}
+        <h2 id="csr-modal-title" style="font-size:var(--fs-lg);">✎ Edit Team — ${esc(tm.name)}</h2>
+      </div>
+      <button type="button" class="btn-bw-glass btn-sm" onclick="closeDialog()">✕ Close</button>
+    </div>
+    <form onsubmit="handleEditTeamSubmit(event, '${esc(tm.id)}')">
+      <div class="dialog-body">
+        <div class="form-group">
+          <label class="form-label" for="et-name">Team Name</label>
+          <input id="et-name" type="text" class="glass-input" value="${esc(tm.name)}" required autofocus />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="et-desc">Description</label>
+          <textarea id="et-desc" class="glass-textarea" rows="2">${esc(tm.description || "")}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="et-lead">Team Lead</label>
+          <select id="et-lead" class="glass-select">
+            <option value="">-- Select Team Lead --</option>
+            ${state.users.map(u => `
+              <option value="${esc(u.id)}" ${u.id === tm.lead_id ? "selected" : ""}>${esc(u.full_name)} (@${esc(u.username)})</option>
+            `).join("")}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Team Members</label>
+          <div style="max-height:160px;overflow-y:auto;border:1px solid var(--border-input);border-radius:var(--radius-sm);padding:0.5rem;display:flex;flex-direction:column;gap:0.35rem;background:var(--bg-hover);">
+            ${state.users.map(u => `
+              <label style="display:flex;align-items:center;gap:0.45rem;font-size:var(--fs-xs);cursor:pointer;">
+                <input type="checkbox" name="edit-team-member-check" value="${esc(u.id)}" ${currentMembers.has(u.id) ? "checked" : ""} />
+                <span>${esc(u.full_name)} (@${esc(u.username)}) • <small style="color:var(--text-muted);">${esc(u.designation || u.department || "")}</small></span>
+              </label>
+            `).join("")}
+          </div>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn-bw-glass" onclick="closeDialog()">Cancel</button>
+        <button type="submit" class="btn-bw-primary">✓ Save Team Changes</button>
+      </div>
+    </form>
+  `);
+}
+
+async function handleEditTeamSubmit(e, teamId) {
+  e.preventDefault();
+  const name = document.getElementById("et-name").value.trim();
+  const description = document.getElementById("et-desc").value.trim();
+  const lead_id = document.getElementById("et-lead").value || null;
+  const memberCheckboxes = document.querySelectorAll('input[name="edit-team-member-check"]:checked');
+  const member_ids = Array.from(memberCheckboxes).map(cb => cb.value);
+
+  try {
+    await apiFetch(`/api/teams/${teamId}`, {
+      method: "PUT",
+      body: JSON.stringify({ name, description, lead_id, member_ids }),
+    });
+    closeDialog();
+    await refreshWorkspaceData();
+    showToast(`Team '${name}' updated successfully!`);
+    render();
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
+function openDeleteTeamConfirmDialog(teamId, teamName) {
+  openDialog(`
+    <div class="dialog-header">
+      <div style="display:flex;align-items:center;gap:0.55rem;">
+        ${renderTrafficLights()}
+        <h2 id="csr-modal-title" style="font-size:var(--fs-lg);color:var(--notion-error);">🗑 Delete Team Confirmation</h2>
+      </div>
+      <button type="button" class="btn-bw-glass btn-sm" onclick="closeDialog()">✕</button>
+    </div>
+    <div class="dialog-body">
+      <p style="font-size:var(--fs-sm);line-height:1.5;">
+        Are you sure you want to delete the team <strong>"${esc(teamName)}"</strong>?
+      </p>
+      <p style="font-size:var(--fs-xs);color:var(--text-muted);margin-top:0.4rem;">
+        Team members will not be deleted, but their association with this team will be cleared.
+      </p>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" class="btn-bw-glass" onclick="closeDialog()">Cancel</button>
+      <button type="button" class="btn-bw-danger" onclick="executeDeleteTeam('${esc(teamId)}')">Yes, Delete Team</button>
+    </div>
+  `);
+}
+
+async function executeDeleteTeam(teamId) {
+  try {
+    await apiFetch(`/api/teams/${teamId}`, { method: "DELETE" });
+    closeDialog();
+    if (state.selectedTeamFilter === teamId) {
+      state.selectedTeamFilter = "ALL";
+    }
+    await refreshWorkspaceData();
+    showToast("Team deleted successfully.");
+    render();
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
 
 window.addEventListener("DOMContentLoaded", initApp);

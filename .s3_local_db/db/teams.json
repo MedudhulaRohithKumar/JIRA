@@ -1,0 +1,45 @@
+{
+  "teams": [
+    {
+      "id": "TEAM-DEVOPS",
+      "name": "DevOps & Cloud Infrastructure",
+      "slug": "devops",
+      "description": "DevOps automation, AWS Lambda, Private VPC, CloudWatch, and CI/CD pipelines.",
+      "lead_id": "USR-001",
+      "member_ids": [
+        "USR-001",
+        "USR-004",
+        "USR-006",
+        "USR-007"
+      ],
+      "created_at": "2026-10-30T12:58:14.584721+05:30",
+      "updated_at": "2026-10-30T12:58:14.584721+05:30"
+    },
+    {
+      "id": "TEAM-ENG",
+      "name": "Product & UI Engineering",
+      "slug": "engineering",
+      "description": "Frontend and backend engineering and API integrations.",
+      "lead_id": "USR-003",
+      "member_ids": [
+        "USR-003",
+        "USR-008"
+      ],
+      "created_at": "2026-10-30T12:58:14.584721+05:30",
+      "updated_at": "2026-10-30T12:58:14.584721+05:30"
+    },
+    {
+      "id": "TEAM-DESIGN",
+      "name": "UI/UX & Product Design",
+      "slug": "design",
+      "description": "Design systems, prototyping, and user workflow.",
+      "lead_id": "USR-002",
+      "member_ids": [
+        "USR-002",
+        "USR-005"
+      ],
+      "created_at": "2026-10-30T12:58:14.584721+05:30",
+      "updated_at": "2026-10-30T12:58:14.584721+05:30"
+    }
+  ]
+}
