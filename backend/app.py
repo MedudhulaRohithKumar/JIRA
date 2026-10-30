@@ -75,56 +75,6 @@ app = FastAPI(
     redoc_url=None,
 )
 
-# Fix Starlette >=0.38 / FastAPI unpack compatibility in AWS Lambda:
-# Prevents "ValueError: not enough values to unpack (expected 3, got 2)" when building middleware stack.
-def _safe_build_middleware_stack(self) -> Any:
-    debug = self.debug
-    error_handler = None
-    exception_handlers = {}
-
-    for key, value in self.exception_handlers.items():
-        if key in (500, Exception):
-            error_handler = value
-        else:
-            exception_handlers[key] = value
-
-    from starlette.middleware import Middleware
-    from starlette.middleware.errors import ServerErrorMiddleware
-    from starlette.middleware.exceptions import ExceptionMiddleware
-
-    middleware = (
-        [Middleware(ServerErrorMiddleware, handler=error_handler, debug=debug)]
-        + self.user_middleware
-        + [
-            Middleware(
-                ExceptionMiddleware, handlers=exception_handlers, debug=debug
-            )
-        ]
-    )
-
-    app_router = self.router
-    for item in reversed(middleware):
-        if hasattr(item, "cls"):
-            cls = item.cls
-            options = getattr(item, "options", getattr(item, "kwargs", {}))
-            args = getattr(item, "args", ())
-            app_router = cls(app_router, *args, **options)
-        elif isinstance(item, (list, tuple)):
-            if len(item) == 3:
-                cls, args, kwargs = item
-                app_router = cls(app_router, *args, **kwargs)
-            elif len(item) == 2:
-                cls, options = item
-                app_router = cls(app_router, **options)
-            else:
-                cls = item[0]
-                app_router = cls(app_router)
-        else:
-            app_router = item(app_router)
-    return app_router
-
-app.build_middleware_stack = types.MethodType(_safe_build_middleware_stack, app)
-
 AVATAR_COLORS = [
     "#2563eb", "#db2777", "#059669", "#7c3aed", "#d97706",
     "#0891b2", "#4f46e5", "#be123c", "#0d9488", "#9333ea",
