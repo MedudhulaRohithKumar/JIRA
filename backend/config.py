@@ -23,8 +23,9 @@ STORAGE_MODE = os.getenv("STORAGE_MODE", "s3" if S3_BUCKET_NAME else "local")
 AWS_REGION = os.getenv("AWS_REGION", "ap-south-1")
 KMS_KEY_ID = os.getenv("KMS_KEY_ID", "")  # Optional SSE-KMS key ARN for S3 encryption
 
-# Local S3 Document DB emulation directory
-LOCAL_S3_DIR = Path(os.getenv("LOCAL_S3_DIR", str(BASE_DIR / ".s3_local_db")))
+# Local S3 Document DB emulation directory (defaults to writable /tmp on AWS Lambda)
+_default_local_s3 = "/tmp/.s3_local_db" if os.getenv("AWS_LAMBDA_FUNCTION_NAME") else str(BASE_DIR / ".s3_local_db")
+LOCAL_S3_DIR = Path(os.getenv("LOCAL_S3_DIR", _default_local_s3))
 
 # Security & JWT Settings
 # In production Lambda, injected via AWS Secrets Manager / KMS-encrypted environment variable

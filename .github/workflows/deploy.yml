@@ -29,9 +29,10 @@ jobs:
 
       - name: Bundle Application Code & Frontend SPA
         run: |
-          # Copy backend package and frontend static assets
+          # Copy backend package, frontend static assets, and Lambda entrypoints
           cp -r backend build/
           cp -r frontend build/
+          cp lambda_function.py build/
 
           # Create Lambda deployment zip archive
           cd build
@@ -57,11 +58,12 @@ jobs:
           aws lambda wait function-updated \
             --function-name "${{ secrets.LAMBDA_FUNCTION_NAME }}"
 
-      - name: Update Lambda Environment Variables
+      - name: Update Lambda Environment Variables & Handler
         run: |
-          echo "Updating Lambda environment variables..."
+          echo "Updating Lambda environment variables and runtime handler..."
           aws lambda update-function-configuration \
             --function-name "${{ secrets.LAMBDA_FUNCTION_NAME }}" \
+            --handler "backend.app.lambda_handler" \
             --environment "Variables={
               STORAGE_MODE=s3,
               S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }},

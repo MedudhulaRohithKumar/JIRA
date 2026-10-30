@@ -81,7 +81,11 @@ AVATAR_COLORS = [
 
 
 # Ensure seed data is initialized on startup / serverless cold start
-ensure_seed_data()
+try:
+    ensure_seed_data()
+except Exception as _seed_err:
+    import logging
+    logging.getLogger("uvicorn.error").warning("Initial seed deferred or skipped: %s", _seed_err)
 
 
 @app.middleware("http")
@@ -1562,6 +1566,14 @@ def serve_spa_index() -> Any:
     if index_path.exists():
         return FileResponse(str(index_path))
     return HTMLResponse("<h1>CSR Work Flow Manager Backend Running</h1>")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def serve_favicon() -> Any:
+    fav_path = FRONTEND_DIR / "favicon.svg"
+    if fav_path.exists():
+        return FileResponse(str(fav_path), media_type="image/svg+xml")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # ---------------------------------------------------------------------------

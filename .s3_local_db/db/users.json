@@ -13,7 +13,7 @@
       "is_active": true,
       "created_at": "2026-10-27T14:38:02.895700+05:30",
       "updated_at": "2026-10-27T14:38:02.895700+05:30",
-      "team_id": null
+      "team_id": "TEAM-DEVOPS"
     },
     {
       "id": "USR-002",
@@ -58,7 +58,7 @@
       "is_active": true,
       "created_at": "2026-10-27T14:38:02.895700+05:30",
       "updated_at": "2026-10-27T14:38:02.895700+05:30",
-      "team_id": null
+      "team_id": "TEAM-DEVOPS"
     },
     {
       "id": "USR-005",
